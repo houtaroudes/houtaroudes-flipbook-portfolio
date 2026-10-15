@@ -92,6 +92,8 @@ async function start() {
   if (new URLSearchParams(location.search).has("capture")) {
     window.__book = book;
     window.__camera = camera;
+    window.__cam = camState;
+    window.__step = applyCamera;
     window.__render = (t = clock()) => {
       applyCamera(1);
       applyCamera(1);
@@ -110,18 +112,64 @@ async function start() {
 
 // ---------------- camera ----------------
 
+// The book has one resting angle. The intro drift settles into it and any free
+// look eases back to it once the pointer goes quiet, so a visitor who wanders
+// off leaves the book presented the way it was meant to be seen.
 const CAM_TARGET = new THREE.Vector3(0, 0.1, 0);
-const camState = { yaw: 0.55, pitch: 0.12, tYaw: 0.26, tPitch: 0.0, dist: 3.6, pitchBase: 0.62 };
+const CAM_HOME = { yaw: 0.26, pitch: 0, dist: 3.6 };
+const CAM_IDLE = 3;   // seconds of quiet before the look walks itself home
+const LOOK = { yaw: 1.25, up: 0.5, down: 0.42, in: 1.2, out: 1.8 };
+
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+
+const camState = {
+  yaw: 0.55, pitch: 0.12,
+  tYaw: CAM_HOME.yaw, tPitch: CAM_HOME.pitch,
+  dist: CAM_HOME.dist, tDist: CAM_HOME.dist,
+  pitchBase: 0.62,
+  look: { yaw: 0, pitch: 0, dist: 0 },   // the visitor's offset from home
+  lookT: { yaw: 0, pitch: 0, dist: 0 },  // where that offset is heading
+  idleAt: -Infinity,
+};
+
+// Called by every camera gesture. The offsets accumulate, so a visitor can
+// keep swinging past the limit instead of the drag dying at the edge.
+function nudgeLook(yaw, pitch, dist) {
+  const t = camState.lookT;
+  t.yaw = clamp(t.yaw + yaw, -LOOK.yaw, LOOK.yaw);
+  t.pitch = clamp(t.pitch + pitch, -LOOK.down, LOOK.up);
+  t.dist = clamp(t.dist + dist, -LOOK.in, LOOK.out);
+  camState.idleAt = clock();
+}
 
 function applyCamera(dt) {
   const k = 3.2;
   camState.yaw += (camState.tYaw - camState.yaw) * (1 - Math.exp(-k * dt));
   camState.pitch += (camState.tPitch - camState.pitch) * (1 - Math.exp(-k * dt));
-  const ang = camState.pitchBase + camState.pitch;
+  camState.dist += (camState.tDist - camState.dist) * (1 - Math.exp(-k * dt));
+
+  // Free look tracks the pointer quickly and returns home slowly, so the
+  // drift back reads as the book settling rather than as a snap back.
+  const home = clock() - camState.idleAt > CAM_IDLE;
+  if (home) {
+    camState.lookT.yaw = 0;
+    camState.lookT.pitch = 0;
+    camState.lookT.dist = 0;
+  }
+  const lk = home ? 1.1 : 9;
+  const l = camState.look;
+  const lt = camState.lookT;
+  l.yaw += (lt.yaw - l.yaw) * (1 - Math.exp(-lk * dt));
+  l.pitch += (lt.pitch - l.pitch) * (1 - Math.exp(-lk * dt));
+  l.dist += (lt.dist - l.dist) * (1 - Math.exp(-lk * dt));
+
+  const yaw = camState.yaw + l.yaw;
+  const ang = camState.pitchBase + camState.pitch + l.pitch;
+  const dist = camState.dist + l.dist;
   camera.position.set(
-    CAM_TARGET.x + Math.sin(camState.yaw) * Math.cos(ang) * camState.dist,
-    CAM_TARGET.y + Math.sin(ang) * camState.dist,
-    CAM_TARGET.z + Math.cos(camState.yaw) * Math.cos(ang) * camState.dist
+    CAM_TARGET.x + Math.sin(yaw) * Math.cos(ang) * dist,
+    CAM_TARGET.y + Math.sin(ang) * dist,
+    CAM_TARGET.z + Math.cos(yaw) * Math.cos(ang) * dist
   );
 }
 
@@ -296,11 +344,55 @@ function wireUi() {
   canvas.addEventListener("pointerdown", onPointerDown);
   canvas.addEventListener("pointermove", onPointerMove);
   canvas.addEventListener("pointerup", onPointerUp);
-  canvas.addEventListener("pointercancel", () => endPointer(null));
+  canvas.addEventListener("pointercancel", (e) => endPointer(e));
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  canvas.addEventListener("wheel", onWheel, { passive: false });
 }
 
 const pointer = { down: null };
+
+// Free look: the camera takes the empty table, the right button anywhere, and
+// any second finger. The left button on the book keeps turning pages.
+const lookDrag = { id: null, x: 0, y: 0, pinch: 0 };
+const livePointers = new Map();
+
+function pointerCentroid() {
+  let x = 0;
+  let y = 0;
+  for (const p of livePointers.values()) {
+    x += p.x;
+    y += p.y;
+  }
+  const n = livePointers.size;
+  return n ? { x: x / n, y: y / n } : null;
+}
+
+function pinchSpread() {
+  const [a, b] = [...livePointers.values()];
+  return b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+}
+
+function startLookGesture(id) {
+  sound.unlock();
+  const c = pointerCentroid();
+  lookDrag.id = id;
+  lookDrag.x = c ? c.x : 0;
+  lookDrag.y = c ? c.y : 0;
+  lookDrag.pinch = pinchSpread();
+  // Stamps the idle timer, so a fresh gesture gets the whole quiet window
+  // before the view starts drifting home.
+  camState.idleAt = clock();
+  try {
+    canvas.setPointerCapture(id);
+  } catch {}
+  canvas.style.cursor = "grabbing";
+}
+
+function onWheel(e) {
+  if (overlayOpen) return;
+  e.preventDefault();
+  nudgeLook(0, 0, e.deltaY * 0.0016);
+}
 const hitPlane = new THREE.Plane();
 
 function pickX(e) {
@@ -315,11 +407,32 @@ function pickX(e) {
   return p;
 }
 
+function cancelPageDrag() {
+  if (!book.drag) return;
+  book.endDrag(clock());
+  syncHash();
+}
+
 function onPointerDown(e) {
-  if (e.button !== 0 || overlayOpen) return;
+  if (overlayOpen) return;
+  if (e.button !== 0 && e.button !== 2) return;
+  livePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  // A second finger means the camera, never a page turn, so a pinch cannot
+  // leave a page stuck halfway over.
+  if (livePointers.size > 1) {
+    cancelPageDrag();
+    pointer.down = null;
+    startLookGesture(e.pointerId);
+    return;
+  }
+
+  const hit = e.button === 2 ? null : faceAt(e);
+  if (!hit) {
+    startLookGesture(e.pointerId);
+    return;
+  }
   sound.unlock();
-  const hit = faceAt(e);
-  if (!hit) return;
   try {
     canvas.setPointerCapture(e.pointerId);
   } catch {}
@@ -328,6 +441,23 @@ function onPointerDown(e) {
 }
 
 function onPointerMove(e) {
+  if (livePointers.has(e.pointerId)) livePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  if (lookDrag.id !== null) {
+    const c = pointerCentroid();
+    if (c) {
+      // Dragging the table pulls the book with the pointer: sideways swings the
+      // camera the other way, downward lifts the view.
+      nudgeLook(-(c.x - lookDrag.x) * 0.005, (c.y - lookDrag.y) * 0.004, 0);
+      lookDrag.x = c.x;
+      lookDrag.y = c.y;
+    }
+    const spread = pinchSpread();
+    if (spread && lookDrag.pinch) nudgeLook(0, 0, (lookDrag.pinch - spread) * 0.006);
+    lookDrag.pinch = spread;
+    return;
+  }
+
   const d = pointer.down;
   if (!d) {
     hover(faceAt(e));
@@ -357,6 +487,18 @@ function onPointerUp(e) {
 }
 
 function endPointer(e) {
+  if (e) livePointers.delete(e.pointerId);
+  else livePointers.clear();
+
+  if (lookDrag.id !== null && (!e || e.pointerId === lookDrag.id || !livePointers.has(lookDrag.id))) {
+    try {
+      canvas.releasePointerCapture(lookDrag.id);
+    } catch {}
+    lookDrag.id = null;
+    lookDrag.pinch = 0;
+    canvas.style.cursor = "default";
+  }
+
   const d = pointer.down;
   if (!d || (e && d.id !== e.pointerId)) return;
   pointer.down = null;

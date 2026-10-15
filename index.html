@@ -76,6 +76,11 @@
         line-height: 1.6;
         color: var(--ink-soft);
       }
+      .hero p + p { margin-top: 0.55em; }
+      .hero .look {
+        color: rgba(242, 242, 242, 0.38);
+        max-width: 26em;
+      }
       .hero kbd {
         font: inherit;
         font-size: 12px;
@@ -198,7 +203,7 @@
     <canvas
       id="scene"
       tabindex="0"
-      aria-label="A 3D book on a table holding Bryan's projects. Click a page to open that project inside the book, drag a page to turn it, or use the arrow keys."
+      aria-label="A 3D book on a table holding Bryan's projects. Click a page to open that project inside the book, drag a page to turn it, or use the arrow keys. Drag the table to look around the book; the view eases back to its opening angle when you stop."
     ></canvas>
     <div class="vignette" aria-hidden="true"></div>
     <span class="logo">Bryan Sacueza</span>
@@ -207,6 +212,10 @@
       <p>
         Click a page and the project runs right here, in the book. Drag a page or
         press the arrow keys to turn one.
+      </p>
+      <p class="look">
+        Drag the table to look around and scroll to zoom. Let go and the book
+        drifts back to its opening angle.
       </p>
     </section>
     <div class="asides">
