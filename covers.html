@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Cover proof sheet</title>
+    <meta name="description" content="Review page: every project cover at full size." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 40px;
+        background: #0b0a09;
+        color: #f2f2f2;
+        font-family: "Inter Tight", Helvetica, Arial, sans-serif;
+      }
+      header { margin-bottom: 28px; }
+      h1 { margin: 0 0 6px; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+      h2 { margin: 34px 0 16px; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: rgba(242, 242, 242, 0.45); }
+      p { margin: 0; font-size: 13px; color: rgba(242, 242, 242, 0.55); }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+        gap: 22px;
+      }
+      figure { margin: 0; }
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      figcaption {
+        margin-top: 8px;
+        font-size: 12px;
+        color: rgba(242, 242, 242, 0.5);
+        letter-spacing: 0.02em;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Cover proof sheet</h1>
+      <p>Every cover as the book draws it: the two boards, the two endpapers, then the ten project pages in v2 portfolio order. Dev review page, not part of the book.</p>
+    </header>
+    <h2>Boards</h2>
+    <div class="grid" id="boards"></div>
+    <h2>Project pages</h2>
+    <div class="grid" id="grid"></div>
+    <script type="module">
+      import { PROJECT_LIST, drawCoverCanvas, boardCanvases } from "/src/pages.js";
+      const fonts = document.fonts
+        ? Promise.all([
+            document.fonts.load("500 26px 'Inter Tight'"),
+            document.fonts.load("600 66px 'Inter Tight'"),
+            document.fonts.load("400 21px 'Inter Tight'"),
+          ]).then(() => document.fonts.ready)
+        : Promise.resolve();
+      fonts.catch(() => {}).then(() => {
+        const place = (host, canvas, label) => {
+          const fig = document.createElement("figure");
+          canvas.setAttribute("role", "img");
+          canvas.setAttribute("aria-label", label);
+          const cap = document.createElement("figcaption");
+          cap.textContent = label;
+          fig.append(canvas, cap);
+          host.append(fig);
+        };
+
+        const boards = boardCanvases();
+        const host = document.getElementById("boards");
+        place(host, boards.front, "Front board");
+        place(host, boards.back, "Back board");
+        place(host, boards.innerFront, "Inside front endpaper");
+        place(host, boards.innerBack, "Inside back endpaper");
+
+        const grid = document.getElementById("grid");
+        PROJECT_LIST.forEach((project, i) => {
+          place(grid, drawCoverCanvas(project, i), `${String(i + 1).padStart(2, "0")}  ${project.title}  /  ${project.tags.join(", ")}`);
+        });
+        document.body.dataset.ready = "1";
+      });
+    </script>
+  </body>
+</html>

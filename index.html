@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bryan Sacueza - Interactive Portfolio</title>
+    <meta name="description" content="A 3D book of highlight projects. Open a page and the site runs inside it." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --ease: cubic-bezier(0.22, 1, 0.36, 1);
+        --ink: #f2f2f2;
+        --ink-soft: rgba(242, 242, 242, 0.55);
+        --pill: rgba(255, 255, 255, 0.06);
+        --pill-line: rgba(255, 255, 255, 0.14);
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: #060605;
+        color: var(--ink);
+        font-family: "Inter Tight", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        overflow: hidden;
+        overscroll-behavior: none;
+      }
+      canvas#scene {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+        outline: none;
+      }
+      canvas#scene:focus-visible { outline: 1px solid rgba(255, 255, 255, 0.35); outline-offset: -4px; }
+      .vignette {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.5) 100%);
+      }
+
+      /* Chrome: fixed furniture, deliberately outside the canvas. */
+      .logo {
+        position: fixed;
+        top: clamp(18px, 2.6vw, 46px);
+        left: clamp(18px, 4.4vw, 84px);
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        pointer-events: none;
+      }
+      .hero {
+        position: fixed;
+        left: clamp(18px, 4.4vw, 84px);
+        bottom: clamp(18px, 2.6vw, 46px);
+        max-width: 30em;
+        transition: opacity 0.5s var(--ease), transform 0.5s var(--ease);
+        pointer-events: none;
+      }
+      .hero h1 {
+        margin: 0 0 0.4em;
+        font-size: clamp(22px, 3vw, 46px);
+        font-weight: 500;
+        line-height: 1.08;
+        letter-spacing: -0.02em;
+      }
+      .hero p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--ink-soft);
+      }
+      .hero kbd {
+        font: inherit;
+        font-size: 12px;
+        color: var(--ink);
+        background: var(--pill);
+        border: 1px solid var(--pill-line);
+        border-radius: 5px;
+        padding: 1px 5px;
+      }
+      body.book-open .hero { opacity: 0; }
+      .asides {
+        position: fixed;
+        right: clamp(18px, 4.4vw, 84px);
+        bottom: clamp(18px, 2.6vw, 46px);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .pill {
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        color: var(--ink);
+        background: var(--pill);
+        border: 1px solid var(--pill-line);
+        border-radius: 999px;
+        padding: 8px 15px;
+        cursor: pointer;
+        backdrop-filter: blur(6px);
+      }
+      .pill:hover { background: rgba(255, 255, 255, 0.12); }
+      .pill:focus-visible, .site-back:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.5); outline-offset: 2px; }
+      .stepper { display: flex; gap: 8px; }
+      .stepper .pill { padding: 8px 12px; display: grid; place-items: center; }
+      .sound { position: fixed; top: clamp(18px, 2.6vw, 46px); right: clamp(18px, 4.4vw, 84px); }
+      body:not(.ready) .asides, body:not(.ready) .sound { opacity: 0; pointer-events: none; }
+
+      /* In-book page: a project site (or its card) running inside the book. */
+      .site-frame {
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        background: #0d0c0a;
+        display: grid;
+        grid-template-rows: 52px 1fr;
+        opacity: 0;
+        transition: opacity 0.45s var(--ease);
+      }
+      .site-frame.is-open { opacity: 1; }
+      .site-frame[hidden] { display: none; }
+      .site-chrome {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 0 clamp(14px, 3vw, 40px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        background: #0d0c0a;
+      }
+      .site-back {
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        color: var(--ink);
+        background: var(--pill);
+        border: 1px solid var(--pill-line);
+        border-radius: 999px;
+        padding: 8px 16px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .site-back:hover { background: rgba(255, 255, 255, 0.12); }
+      .site-title {
+        font-size: 12px;
+        color: var(--ink-soft);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .site-note {
+        font-size: 12px;
+        color: rgba(242, 242, 242, 0.4);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .site-note[hidden] { display: none; }
+      .site-open-tab {
+        margin-left: auto;
+        font-size: 12px;
+        color: var(--ink-soft);
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      .site-open-tab:hover { color: var(--ink); }
+      .site-open-tab[hidden] { display: none; }
+      .site-stage { padding: 0; min-height: 0; background: #0d0c0a; }
+      .site-iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+
+      .sr-only {
+        position: absolute;
+        width: 1px; height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+      @media (max-width: 720px) {
+        .hero p { max-width: 22em; }
+        .asides { bottom: auto; top: clamp(18px, 2.6vw, 46px); right: auto; left: clamp(18px, 4.4vw, 84px); }
+        .sound { right: clamp(18px, 4.4vw, 84px); }
+        .site-stage { padding: 0 0 10px; }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas
+      id="scene"
+      tabindex="0"
+      aria-label="A 3D book on a table holding Bryan's projects. Click a page to open that project inside the book, drag a page to turn it, or use the arrow keys."
+    ></canvas>
+    <div class="vignette" aria-hidden="true"></div>
+    <span class="logo">Bryan Sacueza</span>
+    <section class="hero">
+      <h1>Ten builds, bound in one book</h1>
+      <p>
+        Click a page and the project runs right here, in the book. Drag a page or
+        press the arrow keys to turn one.
+      </p>
+    </section>
+    <div class="asides">
+      <div class="stepper">
+        <button type="button" class="pill" id="prev" aria-label="Previous spread">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button type="button" class="pill" id="next" aria-label="Next spread">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 2l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+    <button type="button" class="pill sound" id="sound-toggle" aria-pressed="true">Sound on</button>
+    <p class="sr-only" id="page-status" role="status"></p>
+
+    <div class="site-frame" id="site-frame" hidden>
+      <div class="site-chrome">
+        <button type="button" class="site-back" id="site-back">Back to book</button>
+        <span class="site-title" id="site-title"></span>
+        <span class="site-note" id="site-note" hidden></span>
+        <a class="site-open-tab" id="site-open-tab" href="#" target="_blank" rel="noopener noreferrer">Open in new tab</a>
+      </div>
+      <div class="site-stage">
+        <iframe class="site-iframe" id="site-iframe" title="Project running inside the book"></iframe>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
