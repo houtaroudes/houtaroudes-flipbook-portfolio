@@ -116,6 +116,19 @@
       .pill:focus-visible, .site-back:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.5); outline-offset: 2px; }
       .stepper { display: flex; gap: 8px; }
       .stepper .pill { padding: 8px 12px; display: grid; place-items: center; }
+
+      /* The reset pill is only in the layout while the camera sits off its
+         resting angle, so it reads as an offer rather than dead furniture.
+         The asides group is right anchored on desktop, where the stepper then
+         holds still as the pill appears; on phones the group is left anchored,
+         so there the pill stays put instead of nudging the arrows around. */
+      .reset { animation: pill-in 0.28s var(--ease); }
+      @keyframes pill-in {
+        from { opacity: 0; transform: translateY(6px); }
+      }
+      @media (max-width: 720px) {
+        .reset[hidden] { display: inline-flex; }
+      }
       .sound { position: fixed; top: clamp(18px, 2.6vw, 46px); right: clamp(18px, 4.4vw, 84px); }
       body:not(.ready) .asides, body:not(.ready) .sound { opacity: 0; pointer-events: none; }
 
@@ -193,7 +206,9 @@
       }
       @media (max-width: 720px) {
         .hero p { max-width: 22em; }
-        .asides { bottom: auto; top: clamp(18px, 2.6vw, 46px); right: auto; left: clamp(18px, 4.4vw, 84px); }
+        /* The asides row is left anchored here, in the same corner as the
+           wordmark, so it drops below the logo instead of sitting on it. */
+        .asides { bottom: auto; top: calc(clamp(18px, 2.6vw, 46px) + 28px); right: auto; left: clamp(18px, 4.4vw, 84px); }
         .sound { right: clamp(18px, 4.4vw, 84px); }
         .site-stage { padding: 0 0 10px; }
       }
@@ -215,10 +230,20 @@
       </p>
       <p class="look">
         Drag the table to look around and scroll to zoom. Let go and the book
-        drifts back to its opening angle.
+        drifts back to its opening angle, or press <kbd>R</kbd> to snap it back
+        right away.
       </p>
     </section>
     <div class="asides">
+      <button
+        type="button"
+        class="pill reset"
+        id="reset-view"
+        hidden
+        title="Return the book to its opening angle now (R)"
+      >
+        Reset view
+      </button>
       <div class="stepper">
         <button type="button" class="pill" id="prev" aria-label="Previous spread">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>

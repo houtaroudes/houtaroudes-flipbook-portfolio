@@ -6,6 +6,7 @@ import * as sound from "./audio.js";
 
 const canvas = document.getElementById("scene");
 const statusEl = document.getElementById("page-status");
+const resetBtn = document.getElementById("reset-view");
 
 // Cover text is set in Inter Tight, so the webfont has to be in the canvas
 // font set before any page is drawn, otherwise the first paint falls back to
@@ -173,6 +174,37 @@ function applyCamera(dt) {
   );
 }
 
+// The rest of the book's furniture can be anywhere; this is only about the
+// look offsets, so a visitor who has not touched the camera never sees the
+// reset button at all.
+const LOOK_EPS = 0.004;
+
+function viewAtRest() {
+  const l = camState.look;
+  const t = camState.lookT;
+  return (
+    Math.abs(l.yaw) + Math.abs(l.pitch) + Math.abs(l.dist) < LOOK_EPS &&
+    Math.abs(t.yaw) + Math.abs(t.pitch) + Math.abs(t.dist) < LOOK_EPS
+  );
+}
+
+// Puts the camera back on its resting angle in a single frame, which is what
+// the pill and the R key are for: the slow drift is the default, this is the
+// direct way there. Any look drag in flight is dropped first, otherwise the
+// next pointermove would push the view straight back off home.
+function resetView() {
+  if (lookDrag.id !== null) stopLookGesture();
+  camState.look = { yaw: 0, pitch: 0, dist: 0 };
+  camState.lookT = { yaw: 0, pitch: 0, dist: 0 };
+  paintReset();
+}
+
+function paintReset() {
+  if (!resetBtn) return;
+  const rest = viewAtRest();
+  if (resetBtn.hidden !== rest) resetBtn.hidden = rest;
+}
+
 // ---------------- interaction ----------------
 
 const raycaster = new THREE.Raycaster();
@@ -320,6 +352,7 @@ function wireUi() {
 
   document.getElementById("prev").addEventListener("click", () => goToTarget(book.target - 1));
   document.getElementById("next").addEventListener("click", () => goToTarget(book.target + 1));
+  resetBtn.addEventListener("click", resetView);
 
   window.addEventListener("keydown", (e) => {
     // While a project is open in the book, the keyboard belongs to that page.
@@ -334,6 +367,7 @@ function wireUi() {
       goToTarget(book.target + KEYS[e.key]);
     } else if (e.key === "Home") goToTarget(0);
     else if (e.key === "End") goToTarget(book.NI);
+    else if (e.key === "r" || e.key === "R") resetView();
   });
 
   window.addEventListener("hashchange", () => {
@@ -486,17 +520,21 @@ function onPointerUp(e) {
   endPointer(e);
 }
 
+function stopLookGesture() {
+  try {
+    canvas.releasePointerCapture(lookDrag.id);
+  } catch {}
+  lookDrag.id = null;
+  lookDrag.pinch = 0;
+  canvas.style.cursor = "default";
+}
+
 function endPointer(e) {
   if (e) livePointers.delete(e.pointerId);
   else livePointers.clear();
 
   if (lookDrag.id !== null && (!e || e.pointerId === lookDrag.id || !livePointers.has(lookDrag.id))) {
-    try {
-      canvas.releasePointerCapture(lookDrag.id);
-    } catch {}
-    lookDrag.id = null;
-    lookDrag.pinch = 0;
-    canvas.style.cursor = "default";
+    stopLookGesture();
   }
 
   const d = pointer.down;
@@ -561,6 +599,7 @@ function frame() {
   prev = t;
   if (overlayOpen) return;
   applyCamera(dt);
+  paintReset();
   camera.lookAt(CAM_TARGET);
   book.update(t, dt);
   renderer.render(scene, camera);
