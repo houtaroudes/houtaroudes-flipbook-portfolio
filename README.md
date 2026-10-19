@@ -22,14 +22,30 @@ scroll zooms, and `C` opens Contents, `S` mutes the page sounds, `R` returns the
 camera to its opening angle. The marker ribbon on the cover reopens the last
 project you visited.
 
-## Run it
+## Run it locally
 
+    cd houtaroudes-flipbook-portfolio
     npm install
     npm run dev
+
+Then open **http://localhost:5360**. The port is fixed in `vite.config.js`
+with `strictPort: true`, so if 5360 is taken the server fails loudly instead of
+sliding onto another project's slot. Everything runs from the browser: no API,
+no database, no environment file.
 
 ## Build it
 
     npm run build
+    npm run preview
+
+`npm run preview` serves the production bundle from the same port rule.
+
+## Screenshot pass
+
+    node tools/shot-server.mjs shots 5299
+
+Open **http://localhost:5360/?capture=1** so the drawing buffer stays readable
+and the render hooks are exposed, then post captures to that loopback sink.
 
 ## Where things live
 
