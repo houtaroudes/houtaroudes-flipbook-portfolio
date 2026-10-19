@@ -76,12 +76,7 @@
         line-height: 1.6;
         color: var(--ink-soft);
       }
-      .hero p + p { margin-top: 0.55em; }
-      .hero .look {
-        color: rgba(242, 242, 242, 0.38);
-        max-width: 26em;
-      }
-      .hero kbd {
+      kbd {
         font: inherit;
         font-size: 12px;
         color: var(--ink);
@@ -113,9 +108,21 @@
         backdrop-filter: blur(6px);
       }
       .pill:hover { background: rgba(255, 255, 255, 0.12); }
+      /* A pressed pill moves under the finger, which is the whole feedback the
+         control needs on a page that is already in motion. */
+      .pill:active, .site-back:active { transform: translateY(1px); }
       .pill:focus-visible, .site-back:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.5); outline-offset: 2px; }
-      .stepper { display: flex; gap: 8px; }
+      .stepper { display: flex; align-items: center; gap: 8px; }
       .stepper .pill { padding: 8px 12px; display: grid; place-items: center; }
+      .spread-count {
+        min-width: 54px;
+        text-align: center;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        color: var(--ink-soft);
+        font-variant-numeric: tabular-nums;
+        user-select: none;
+      }
 
       /* The reset pill is only in the layout while the camera sits off its
          resting angle, so it reads as an offer rather than dead furniture.
@@ -148,6 +155,7 @@
       .site-chrome {
         display: flex;
         align-items: center;
+        min-width: 0;
         gap: 14px;
         padding: 0 clamp(14px, 3vw, 40px);
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -169,6 +177,7 @@
       }
       .site-back:hover { background: rgba(255, 255, 255, 0.12); }
       .site-title {
+        min-width: 0;
         font-size: 12px;
         color: var(--ink-soft);
         text-transform: uppercase;
@@ -197,6 +206,103 @@
       .site-stage { padding: 0; min-height: 0; background: #0d0c0a; }
       .site-iframe { width: 100%; height: 100%; border: 0; background: #fff; }
 
+      /* Contents: the second way into the book, and the readable one on a
+         phone. A sheet of paper from the same stock as the endpapers. */
+      .contents {
+        position: fixed;
+        inset: 0;
+        margin: auto;
+        width: min(680px, calc(100vw - 32px));
+        max-height: min(720px, calc(100dvh - 32px));
+        padding: 0;
+        /* Square corners on purpose: this is a sheet of the endpaper stock,
+           not a floating app card in a rounded theme. */
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 2px;
+        background: #0c0b09;
+        color: var(--ink);
+        color-scheme: dark;
+        overflow: hidden;
+      }
+      .contents::backdrop { background: rgba(0, 0, 0, 0.66); }
+      .contents-inner {
+        display: flex;
+        flex-direction: column;
+        max-height: inherit;
+        padding: clamp(18px, 4vw, 34px);
+      }
+      .contents-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+      .contents-head h2 { margin: 0; font-size: clamp(22px, 3vw, 30px); font-weight: 500; letter-spacing: -0.01em; }
+      .contents-list { list-style: none; margin: 18px 0 0; padding: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+      .contents-item {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 14px;
+        width: 100%;
+        padding: 14px 8px;
+        border: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.07);
+        background: none;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+        transition: background 0.18s var(--ease);
+      }
+      .contents-item:hover { background: rgba(255, 255, 255, 0.04); }
+      .contents-item:active { background: rgba(255, 255, 255, 0.07); }
+      .contents-item:focus-visible { outline: 1px solid rgba(255, 255, 255, 0.45); outline-offset: -1px; }
+      .contents-num { font-size: 11px; letter-spacing: 0.12em; color: rgba(242, 242, 242, 0.55); font-variant-numeric: tabular-nums; }
+      .contents-name { font-size: clamp(16px, 2vw, 19px); font-weight: 500; letter-spacing: -0.01em; }
+      .contents-kicker { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: rgba(242, 242, 242, 0.55); }
+      .contents-foot {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        margin-top: 20px;
+        padding-top: 18px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 12px;
+      }
+      .contents-foot a { color: var(--ink-soft); text-decoration: none; }
+      .contents-foot a:hover { color: var(--ink); }
+      .contents-copy {
+        font: inherit;
+        font-size: 12px;
+        color: var(--ink-soft);
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+        text-align: left;
+      }
+      .contents-copy:hover, .contents-copy.is-done { color: var(--ink); }
+      .contents-copy:focus-visible { outline: 1px solid rgba(255, 255, 255, 0.45); outline-offset: 3px; }
+      .contents-keys { flex-basis: 100%; margin: 0; color: rgba(242, 242, 242, 0.4); }
+
+      /* The caption that follows the pointer over a page or the ribbon. */
+      .page-hint {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 20;
+        display: grid;
+        gap: 3px;
+        padding: 7px 11px 8px;
+        border: 1px solid var(--pill-line);
+        border-radius: 2px;
+        background: rgba(10, 9, 8, 0.88);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        pointer-events: none;
+        will-change: transform;
+      }
+      .page-hint[hidden] { display: none; }
+      .page-hint-title { font-size: 12px; font-weight: 500; letter-spacing: 0.01em; }
+      .page-hint-meta { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-soft); }
+      body.book-open .page-hint { display: none; }
+      @media (hover: none) { .page-hint { display: none; } }
+
       .sr-only {
         position: absolute;
         width: 1px; height: 1px;
@@ -204,13 +310,56 @@
         clip: rect(0 0 0 0);
         white-space: nowrap;
       }
+      @media (pointer: coarse) {
+        .pill, .site-back { min-height: 44px; }
+        .stepper .pill { min-width: 44px; }
+      }
+      /* Below 380px the counter is the first thing to go: the arrows, Contents
+         and the hidden reset still fit, and the live status keeps working for
+         screen readers. */
+      @media (max-width: 380px) {
+        .spread-count { display: none; }
+      }
+      /* Between a laptop and a phone there is not enough width for the hero and
+         the pill row to share the bottom edge, so the controls move up under
+         the wordmark and the hero keeps the floor to itself. */
+      @media (max-width: 1000px) {
+        .asides { bottom: auto; top: calc(clamp(18px, 2.6vw, 46px) + 56px); right: auto; left: clamp(18px, 4.4vw, 84px); gap: 8px; }
+        .sound { right: clamp(18px, 4.4vw, 84px); }
+      }
       @media (max-width: 720px) {
         .hero p { max-width: 22em; }
-        /* The asides row is left anchored here, in the same corner as the
-           wordmark, so it drops below the logo instead of sitting on it. */
-        .asides { bottom: auto; top: calc(clamp(18px, 2.6vw, 46px) + 28px); right: auto; left: clamp(18px, 4.4vw, 84px); }
-        .sound { right: clamp(18px, 4.4vw, 84px); }
         .site-stage { padding: 0 0 10px; }
+        /* The book is small on a phone, so hiding the hero when it opens leaves
+           an empty screen. Here the copy stays as the caption under it. */
+        body.book-open .hero { opacity: 1; }
+        /* The reset pill reserves its place in the row so the arrows do not
+           shift, but it should not show while the view is already home. */
+        .reset[hidden] { display: inline-flex; visibility: hidden; pointer-events: none; }
+        .site-chrome { gap: 10px; padding: 0 14px; }
+        .site-note { display: none !important; }
+        .site-open-tab { font-size: 11px; }
+        .contents {
+          width: 100%;
+          max-width: none;
+          height: 100%;
+          max-height: none;
+          margin: 0;
+          border: 0;
+          border-radius: 0;
+        }
+        .contents-inner { height: 100%; padding: 22px 18px; }
+        .contents-item { padding: 16px 4px; min-height: 56px; }
+        .contents-kicker { display: none; }
+      }
+      /* A phone on its side has almost no height: the book is the whole
+         composition, so the hero steps out rather than overlapping it. */
+      @media (max-height: 560px) {
+        .hero { display: none; }
+        body.book-open .hero { display: none; opacity: 0; }
+        /* With no hero there is room under the book, which is where the chrome
+           belongs on a short screen; top-left would sit on the pages. */
+        .asides { top: auto; bottom: clamp(12px, 2.6vw, 24px); left: auto; right: clamp(12px, 4vw, 40px); }
       }
     </style>
   </head>
@@ -218,23 +367,27 @@
     <canvas
       id="scene"
       tabindex="0"
-      aria-label="A 3D book on a table holding Bryan's projects. Click a page to open that project inside the book, drag a page to turn it, or use the arrow keys. Drag the table to look around the book; the view eases back to its opening angle when you stop."
+      aria-label="A 3D book on a table holding Bryan's projects. Click a page to open that project inside the book, drag a page to turn it, or use the arrow keys. Drag the table to look around the book; the view eases back to its opening angle when you stop. Pull the front cover to open the book, and click the wall lamp to dim the room."
     ></canvas>
     <div class="vignette" aria-hidden="true"></div>
     <span class="logo">Bryan Sacueza</span>
     <section class="hero">
       <h1>Ten builds, bound in one book</h1>
       <p>
-        Click a page and the project runs right here, in the book. Drag a page or
-        press the arrow keys to turn one.
-      </p>
-      <p class="look">
-        Drag the table to look around and scroll to zoom. Let go and the book
-        drifts back to its opening angle, or press <kbd>R</kbd> to snap it back
-        right away.
+        Open a page to run the project here. Drag a corner, swipe the table, or
+        use the arrow keys.
       </p>
     </section>
     <div class="asides">
+      <button
+        type="button"
+        class="pill"
+        id="contents-open"
+        aria-haspopup="dialog"
+        aria-controls="contents-dialog"
+      >
+        Contents
+      </button>
       <button
         type="button"
         class="pill reset"
@@ -242,12 +395,13 @@
         hidden
         title="Return the book to its opening angle now (R)"
       >
-        Reset view
+        Reset
       </button>
       <div class="stepper">
         <button type="button" class="pill" id="prev" aria-label="Previous spread">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
+        <span class="spread-count" id="spread-count" aria-hidden="true">Cover</span>
         <button type="button" class="pill" id="next" aria-label="Next spread">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 2l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
@@ -255,6 +409,32 @@
     </div>
     <button type="button" class="pill sound" id="sound-toggle" aria-pressed="true">Sound on</button>
     <p class="sr-only" id="page-status" role="status"></p>
+    <p class="sr-only" id="lamp-status" role="status"></p>
+    <div class="page-hint" id="page-hint" hidden aria-hidden="true">
+      <span class="page-hint-title" id="page-hint-title"></span>
+      <span class="page-hint-meta" id="page-hint-meta"></span>
+    </div>
+
+    <dialog class="contents" id="contents-dialog" aria-labelledby="contents-title">
+      <div class="contents-inner">
+        <header class="contents-head">
+          <h2 id="contents-title">Contents</h2>
+          <button type="button" class="pill" id="contents-close">Close</button>
+        </header>
+        <ol class="contents-list" id="contents-list"></ol>
+        <footer class="contents-foot">
+          <a href="mailto:houtaroudes@gmail.com">houtaroudes@gmail.com</a>
+          <a href="https://github.com/houtaroudes" target="_blank" rel="noopener noreferrer">github.com/houtaroudes</a>
+          <button type="button" class="contents-copy" id="contents-copy">Copy page link</button>
+          <p class="contents-keys">
+            Arrow keys turn pages. Drag the table to look around, scroll to zoom.
+            <kbd>C</kbd> opens this sheet, <kbd>L</kbd> dims the lamp, <kbd>R</kbd>
+            returns the view to its opening angle.
+          </p>
+          <span class="sr-only" id="copy-status" role="status"></span>
+        </footer>
+      </div>
+    </dialog>
 
     <div class="site-frame" id="site-frame" hidden>
       <div class="site-chrome">

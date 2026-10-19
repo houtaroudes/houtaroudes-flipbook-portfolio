@@ -74,7 +74,7 @@ const PROJECTS = [
     slug: "pixelpod",
     title: "PixelPodWeb",
     kicker: "Full stack",
-    blurb: "A photobooth web app with a PHP and MySQL backend, built solo as a school project.",
+    blurb: "A photobooth web app: pick a layout and a look, sit for the countdown, leave with one strip. PHP and MySQL behind it.",
     tags: ["PHP", "MySQL", "JS"],
     hue: 320,
     dark: true,

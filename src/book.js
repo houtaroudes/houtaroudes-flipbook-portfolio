@@ -55,6 +55,13 @@ export class Book {
     this.#makeCover(this.NI - 1, { outer: boards.back, inner: boards.innerBack }, false);
     this.#makeEdgeBlocks();
     this.#makeSpine();
+    // Anchor for the ribbon marker: on the top face of the closed block, near
+    // the fore edge so the tail hangs over the edge the camera faces instead
+    // of disappearing behind the book. It lives on the inner group so it
+    // travels with the spine when the covers swing open.
+    this.markerAnchor = new THREE.Group();
+    this.markerAnchor.position.set(this.Wc - 0.2, this.T / 2 + 0.001, this.Hc / 2 - 0.13);
+    this.inner.add(this.markerAnchor);
     this.items.forEach((it) => this.#applyPose(it));
     this.#layout();
   }
@@ -378,12 +385,30 @@ export class Book {
   dragTo(x, t) {
     const d = this.drag;
     if (!d) return;
-    const r = clamp(x / d.x0, -1, 1);
-    const ang = Math.acos(r) / PI;
-    d.it.p = d.dir > 0 ? ang : 1 - ang;
-    d.it.dirty = true;
+    if (d.cover) {
+      // A cover has no curl to aim at, so the pull maps straight onto the
+      // angle: one board width of travel swings it through 180 degrees.
+      d.it.p = clamp(d.p0 + (d.x0 - x) / this.Wc, 0, 1);
+      d.it.dirty = true;
+    } else {
+      const r = clamp(x / d.x0, -1, 1);
+      const ang = Math.acos(r) / PI;
+      d.it.p = d.dir > 0 ? ang : 1 - ang;
+      d.it.dirty = true;
+    }
     d.samples.push({ t, p: d.it.p });
     while (d.samples.length > 2 && t - d.samples[0].t > 0.12) d.samples.shift();
+  }
+
+  // The front board can be pulled open like a real cover. Only from closed:
+  // dragging a board that is already lying flat is a knuckle against a table.
+  beginCoverDrag(k, x, t) {
+    const it = this.items[k];
+    if (!it || it.kind !== "cover" || this.drag || it.active || it.p > 0.02) return false;
+    this.setHover(-1);
+    it.dragging = true;
+    this.drag = { it, cover: true, x0: x, p0: it.p, samples: [{ t, p: it.p }] };
+    return true;
   }
 
   endDrag(t) {
@@ -398,7 +423,10 @@ export class Book {
     it.dragging = false;
     this.#animate(it, done ? 1 : 0, t, 0, 0.75, stiff);
     it.curl = 1.15;
-    this.target = done ? it.k + 1 : it.k;
+    // A cover settles into an end state rather than a neighbouring page: open
+    // front board means spread 1, shut means the closed cover.
+    if (it.kind === "cover" && it.k === 0) this.target = done ? 1 : 0;
+    else this.target = done ? it.k + 1 : it.k;
   }
 
   get busy() {
