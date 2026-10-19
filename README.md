@@ -15,7 +15,11 @@ and a shelf of spines, all built from primitives.
 
 The lamp is the room's switch. Click it, or press `L`, and the reading light
 drops to an ember; the pool on the wall, the key light and the shade's edge all
-follow one value so the room dims as a room. Pull the closed front cover with the
+follow one value so the room dims as a room. The chrome follows it too, warm
+bone and brown glass under the lamp, cool slate with it down, including the
+Contents sheet and the project overlay. The choice is stored in
+`localStorage`, and an inline script applies it before the first paint so a
+dim-room visitor never gets a bright flash. Pull the closed front cover with the
 pointer to open the book, drag a page corner to turn it, swipe the table with one
 finger, or flick a trackpad sideways. Two fingers or the mouse move the camera,
 scroll zooms, and `C` opens Contents, `S` mutes the page sounds, `R` returns the
@@ -59,9 +63,10 @@ and the render hooks are exposed, then post captures to that loopback sink.
 | `covers.html` | Cover proof sheet for reviewing all fourteen designs at full size |
 | `tools/shot-server.mjs` | Loopback sink that screenshot passes post their captures to |
 
-Two projects cannot be embedded in a page (no deploy, or a site that refuses
-framing) and one has no live build, so those open an in-book card instead of a
-running site.
+Most pages run the deployed site inside the sheet. PixelPodWeb embeds its live
+landing page, which links to the booth. Modern Filipino Homes refuses framing
+and GitHub does not allow it, while MediQueue and Houtarou Cafe have no live
+build, so those open an in-book card instead.
 
 ## On a phone
 

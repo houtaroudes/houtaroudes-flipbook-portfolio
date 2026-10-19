@@ -8,14 +8,77 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet" />
+    <script>
+      /* The lamp is a stored preference, so the first paint has to know it.
+         Reading the value here keeps the page from flashing its bright chrome
+         at someone who left the room dim. */
+      try {
+        if (localStorage.getItem("flipbook:lamp") === "0") {
+          document.documentElement.classList.add("lamp-off");
+        }
+      } catch {}
+    </script>
     <style>
+      /* Two rooms, one page. Under the lamp the chrome is warm bone and brown
+         glass; with the lamp down it turns to cool slate, the way the room does.
+         Both are dark, both keep the same hierarchy, and the text stays above
+         AA in each. */
+      @property --ink { syntax: '<color>'; inherits: true; initial-value: #f5efe5; }
+      @property --ink-soft { syntax: '<color>'; inherits: true; initial-value: rgba(245, 239, 229, 0.58); }
+      @property --ink-faint { syntax: '<color>'; inherits: true; initial-value: rgba(245, 239, 229, 0.38); }
+      @property --pill { syntax: '<color>'; inherits: true; initial-value: rgba(255, 236, 209, 0.07); }
+      @property --pill-line { syntax: '<color>'; inherits: true; initial-value: rgba(255, 231, 200, 0.16); }
+      @property --pill-hover { syntax: '<color>'; inherits: true; initial-value: rgba(255, 236, 209, 0.13); }
+      @property --hover { syntax: '<color>'; inherits: true; initial-value: rgba(255, 236, 209, 0.05); }
+      @property --chrome { syntax: '<color>'; inherits: true; initial-value: #0c0b09; }
+      @property --rule { syntax: '<color>'; inherits: true; initial-value: rgba(255, 240, 220, 0.1); }
+      @property --hint-bg { syntax: '<color>'; inherits: true; initial-value: rgba(12, 10, 8, 0.9); }
+      @property --scrim { syntax: '<color>'; inherits: true; initial-value: rgba(0, 0, 0, 0.66); }
+      @property --focus { syntax: '<color>'; inherits: true; initial-value: rgba(255, 245, 231, 0.6); }
+
       :root {
         --ease: cubic-bezier(0.22, 1, 0.36, 1);
-        --ink: #f2f2f2;
-        --ink-soft: rgba(242, 242, 242, 0.55);
-        --pill: rgba(255, 255, 255, 0.06);
-        --pill-line: rgba(255, 255, 255, 0.14);
+        --ink: #f5efe5;
+        --ink-soft: rgba(245, 239, 229, 0.58);
+        --ink-faint: rgba(245, 239, 229, 0.38);
+        --pill: rgba(255, 236, 209, 0.07);
+        --pill-line: rgba(255, 231, 200, 0.16);
+        --pill-hover: rgba(255, 236, 209, 0.13);
+        --hover: rgba(255, 236, 209, 0.05);
+        --chrome: #0c0b09;
+        --rule: rgba(255, 240, 220, 0.1);
+        --hint-bg: rgba(12, 10, 8, 0.9);
+        --scrim: rgba(0, 0, 0, 0.66);
+        --focus: rgba(255, 245, 231, 0.6);
       }
+      @media (prefers-reduced-motion: no-preference) {
+        :root {
+          transition:
+            --ink 0.7s var(--ease), --ink-soft 0.7s var(--ease),
+            --ink-faint 0.7s var(--ease), --pill 0.7s var(--ease),
+            --pill-line 0.7s var(--ease), --pill-hover 0.7s var(--ease),
+            --hover 0.7s var(--ease), --chrome 0.7s var(--ease),
+            --rule 0.7s var(--ease), --hint-bg 0.7s var(--ease),
+            --scrim 0.7s var(--ease), --focus 0.7s var(--ease);
+        }
+      }
+      html.lamp-off {
+        --ink: #dfe4ea;
+        --ink-soft: rgba(223, 228, 234, 0.68);
+        --ink-faint: rgba(223, 228, 234, 0.46);
+        --pill: rgba(190, 205, 220, 0.07);
+        --pill-line: rgba(190, 205, 220, 0.22);
+        --pill-hover: rgba(190, 205, 220, 0.14);
+        --hover: rgba(190, 205, 220, 0.055);
+        --chrome: #080a0d;
+        --rule: rgba(198, 212, 226, 0.11);
+        --hint-bg: rgba(8, 10, 13, 0.92);
+        --scrim: rgba(0, 0, 0, 0.74);
+        --focus: rgba(214, 228, 242, 0.7);
+      }
+      html.lamp-off body { background: #050608; }
+      body { transition: background-color 0.7s var(--ease); }
+      html.lamp-off .vignette { background: radial-gradient(ellipse at center, transparent 44%, rgba(0, 0, 0, 0.68) 100%); }
       * { box-sizing: border-box; }
       html, body {
         margin: 0;
@@ -36,7 +99,7 @@
         touch-action: none;
         outline: none;
       }
-      canvas#scene:focus-visible { outline: 1px solid rgba(255, 255, 255, 0.35); outline-offset: -4px; }
+      canvas#scene:focus-visible { outline: 1px solid var(--focus); outline-offset: -4px; }
       .vignette {
         position: fixed;
         inset: 0;
@@ -107,11 +170,11 @@
         cursor: pointer;
         backdrop-filter: blur(6px);
       }
-      .pill:hover { background: rgba(255, 255, 255, 0.12); }
+      .pill:hover { background: var(--pill-hover); }
       /* A pressed pill moves under the finger, which is the whole feedback the
          control needs on a page that is already in motion. */
       .pill:active, .site-back:active { transform: translateY(1px); }
-      .pill:focus-visible, .site-back:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.5); outline-offset: 2px; }
+      .pill:focus-visible, .site-back:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
       .stepper { display: flex; align-items: center; gap: 8px; }
       .stepper .pill { padding: 8px 12px; display: grid; place-items: center; }
       .spread-count {
@@ -144,7 +207,7 @@
         position: fixed;
         inset: 0;
         z-index: 40;
-        background: #0d0c0a;
+        background: var(--chrome);
         display: grid;
         grid-template-rows: 52px 1fr;
         opacity: 0;
@@ -158,8 +221,8 @@
         min-width: 0;
         gap: 14px;
         padding: 0 clamp(14px, 3vw, 40px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        background: #0d0c0a;
+        border-bottom: 1px solid var(--rule);
+        background: var(--chrome);
       }
       .site-back {
         font-family: inherit;
@@ -175,7 +238,7 @@
         cursor: pointer;
         white-space: nowrap;
       }
-      .site-back:hover { background: rgba(255, 255, 255, 0.12); }
+      .site-back:hover { background: var(--pill-hover); }
       .site-title {
         min-width: 0;
         font-size: 12px;
@@ -188,7 +251,7 @@
       }
       .site-note {
         font-size: 12px;
-        color: rgba(242, 242, 242, 0.4);
+        color: var(--ink-faint);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -203,7 +266,7 @@
       }
       .site-open-tab:hover { color: var(--ink); }
       .site-open-tab[hidden] { display: none; }
-      .site-stage { padding: 0; min-height: 0; background: #0d0c0a; }
+      .site-stage { padding: 0; min-height: 0; background: var(--chrome); }
       .site-iframe { width: 100%; height: 100%; border: 0; background: #fff; }
 
       /* Contents: the second way into the book, and the readable one on a
@@ -217,14 +280,14 @@
         padding: 0;
         /* Square corners on purpose: this is a sheet of the endpaper stock,
            not a floating app card in a rounded theme. */
-        border: 1px solid rgba(255, 255, 255, 0.12);
+        border: 1px solid var(--rule);
         border-radius: 2px;
-        background: #0c0b09;
+        background: var(--chrome);
         color: var(--ink);
         color-scheme: dark;
         overflow: hidden;
       }
-      .contents::backdrop { background: rgba(0, 0, 0, 0.66); }
+      .contents::backdrop { background: var(--scrim); }
       .contents-inner {
         display: flex;
         flex-direction: column;
@@ -242,7 +305,7 @@
         width: 100%;
         padding: 14px 8px;
         border: 0;
-        border-top: 1px solid rgba(255, 255, 255, 0.07);
+        border-top: 1px solid var(--rule);
         background: none;
         color: inherit;
         font: inherit;
@@ -250,19 +313,19 @@
         cursor: pointer;
         transition: background 0.18s var(--ease);
       }
-      .contents-item:hover { background: rgba(255, 255, 255, 0.04); }
-      .contents-item:active { background: rgba(255, 255, 255, 0.07); }
-      .contents-item:focus-visible { outline: 1px solid rgba(255, 255, 255, 0.45); outline-offset: -1px; }
-      .contents-num { font-size: 11px; letter-spacing: 0.12em; color: rgba(242, 242, 242, 0.55); font-variant-numeric: tabular-nums; }
+      .contents-item:hover { background: var(--hover); }
+      .contents-item:active { background: var(--pill); }
+      .contents-item:focus-visible { outline: 1px solid var(--focus); outline-offset: -1px; }
+      .contents-num { font-size: 11px; letter-spacing: 0.12em; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
       .contents-name { font-size: clamp(16px, 2vw, 19px); font-weight: 500; letter-spacing: -0.01em; }
-      .contents-kicker { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: rgba(242, 242, 242, 0.55); }
+      .contents-kicker { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-soft); }
       .contents-foot {
         display: flex;
         flex-wrap: wrap;
         gap: 18px;
         margin-top: 20px;
         padding-top: 18px;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        border-top: 1px solid var(--rule);
         font-size: 12px;
       }
       .contents-foot a { color: var(--ink-soft); text-decoration: none; }
@@ -278,8 +341,8 @@
         text-align: left;
       }
       .contents-copy:hover, .contents-copy.is-done { color: var(--ink); }
-      .contents-copy:focus-visible { outline: 1px solid rgba(255, 255, 255, 0.45); outline-offset: 3px; }
-      .contents-keys { flex-basis: 100%; margin: 0; color: rgba(242, 242, 242, 0.4); }
+      .contents-copy:focus-visible { outline: 1px solid var(--focus); outline-offset: 3px; }
+      .contents-keys { flex-basis: 100%; margin: 0; color: var(--ink-faint); }
 
       /* The caption that follows the pointer over a page or the ribbon. */
       .page-hint {
@@ -292,7 +355,7 @@
         padding: 7px 11px 8px;
         border: 1px solid var(--pill-line);
         border-radius: 2px;
-        background: rgba(10, 9, 8, 0.88);
+        background: var(--hint-bg);
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
         pointer-events: none;
         will-change: transform;
@@ -367,7 +430,7 @@
     <canvas
       id="scene"
       tabindex="0"
-      aria-label="A 3D book on a table holding Bryan's projects. Click a page to open that project inside the book, drag a page to turn it, or use the arrow keys. Drag the table to look around the book; the view eases back to its opening angle when you stop. Pull the front cover to open the book, and click the wall lamp to dim the room."
+      aria-label="A 3D book on a table holding Bryan's projects. Click a page to open that project inside the book, drag a page to turn it, or use the arrow keys. Drag the table to look around the book; the view eases back to its opening angle when you stop. Pull the front cover to open the book, and click the wall lamp to switch between the reading light and a dim room; the choice is remembered."
     ></canvas>
     <div class="vignette" aria-hidden="true"></div>
     <span class="logo">Bryan Sacueza</span>
@@ -428,8 +491,8 @@
           <button type="button" class="contents-copy" id="contents-copy">Copy page link</button>
           <p class="contents-keys">
             Arrow keys turn pages. Drag the table to look around, scroll to zoom.
-            <kbd>C</kbd> opens this sheet, <kbd>L</kbd> dims the lamp, <kbd>R</kbd>
-            returns the view to its opening angle.
+            <kbd>C</kbd> opens this sheet, <kbd>L</kbd> switches the reading light,
+            <kbd>R</kbd> returns the view to its opening angle.
           </p>
           <span class="sr-only" id="copy-status" role="status"></span>
         </footer>

@@ -487,15 +487,31 @@ const pointerLight = { x: 0, y: 0, tx: 0, ty: 0 };
 // light down to an ember: the pool fades, the shade keeps a warm edge, and the
 // page copy stays legible. The direction comes from the Pull Lamp pattern on
 // 21st.dev, where the desk lamp is the control rather than a separate toggle.
-let lampOn = true;
-let lampMix = 1;
+const LAMP_KEY = "flipbook:lamp";
+
+// The preference is shared with the inline script in index.html, which applies
+// it before the first paint. This only has to agree with it.
+function readLamp() {
+  try {
+    return localStorage.getItem(LAMP_KEY) !== "0";
+  } catch {
+    return true;
+  }
+}
+
+let lampOn = readLamp();
+let lampMix = lampOn ? 1 : 0;
+document.documentElement.classList.toggle("lamp-off", !lampOn);
 const lampStatus = () => document.getElementById("lamp-status");
 
 function toggleLamp() {
   lampOn = !lampOn;
+  try {
+    localStorage.setItem(LAMP_KEY, lampOn ? "1" : "0");
+  } catch {}
+  document.documentElement.classList.toggle("lamp-off", !lampOn);
   const status = lampStatus();
   if (status) status.textContent = lampOn ? "Reading light on." : "Reading light dimmed.";
-  document.body.classList.toggle("lamp-off", !lampOn);
 }
 
 function updateRoom(t, dt) {
@@ -722,6 +738,8 @@ async function start() {
     window.__book = book;
     window.__camera = camera;
     window.__lamp = lamp;
+    window.__lampState = () => ({ on: lampOn, mix: lampMix });
+    window.__pick = (x, y) => faceAt({ clientX: x, clientY: y });
     window.__project = (x, y, z) => {
       const v = new THREE.Vector3(x, y, z).project(camera);
       const rect = canvas.getBoundingClientRect();
@@ -902,7 +920,11 @@ function faceAt(e) {
   const meshes = [];
   for (const it of book.items) {
     if (it.kind === "cover") {
-      if (it.pivot.rotation.z < Math.PI / 2 + 0.05) meshes.push(it.board);
+      // Both boards stay pickable. An open cover lies under its pile, so the
+      // nearest hit is still the page; the case this used to break was the
+      // face-down back cover, which sits on top and could not be clicked at
+      // all once it had swung past ninety degrees.
+      meshes.push(it.board);
     } else if (it.kind === "sheet" && (it.front.visible || it.back.visible)) {
       meshes.push(it.front, it.back);
     }
@@ -914,7 +936,10 @@ function faceAt(e) {
   return { k, side: hit.point.x >= 0 ? 1 : -1, u: hit.uv ? hit.uv.x : 0.5 };
 }
 
-const isSheet = (k) => k > 0 && k < book.NI;
+// Sheet items are 1..N. NI is the target past the back board, not an item,
+// so the upper bound has to be NI - 1; using NI made the back cover look like
+// a page that could be opened, which swallowed every click on it.
+const isSheet = (k) => k > 0 && k < book.NI - 1;
 // A sheet carries two projects: the front face of sheet k is page 2k-2, the
 // back face is page 2k-1.
 const pageIndexOf = (hit) => 2 * (hit.k - 1) + (hit.side < 0 ? 1 : 0);
@@ -1413,7 +1438,9 @@ function endPointer(e) {
   }
   // Covers behave like a real book: the front board opens and closes it.
   if (d.hit.k === 0) goToTarget(book.target === 0 ? 1 : 0);
-  else if (d.hit.k === book.NI) goToTarget(book.target >= book.NI ? book.NI - 1 : book.NI);
+  // The back board is item NI - 1; NI is the target past it, which is why this
+  // comparison used to miss and the face-down cover did nothing.
+  else if (d.hit.k === book.NI - 1) goToTarget(book.target >= book.NI ? book.NI - 1 : book.NI);
 }
 
 // One label for both hover targets: a page names the project it opens, and
@@ -1477,6 +1504,9 @@ function hoverAt(e) {
     if (hit.k === 0 && book.items[0].p < 0.02) {
       canvas.style.cursor = "grab";
       showHint("Portfolio 2026", "Pull the cover open", e);
+    } else if (hit.k === book.NI - 1 && book.items[book.NI - 1].p > 0.98) {
+      canvas.style.cursor = "pointer";
+      showHint("Back cover", "Click to open the book again", e);
     } else hideHint();
     return;
   }

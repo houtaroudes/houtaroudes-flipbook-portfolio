@@ -78,10 +78,13 @@ const PROJECTS = [
     tags: ["PHP", "MySQL", "JS"],
     hue: 320,
     dark: true,
-    url: null,
+    // The app itself is PHP and MySQL, but the public site is deployed as a
+    // static snapshot (site-preview/), and the booth runs as its own Vercel
+    // project. That makes the page embeddable now; it used to open a card
+    // saying there was no live deploy at all.
+    url: "https://pixelpodweb.vercel.app",
     repo: "https://github.com/houtaroudes/PixelPodWeb",
-    embed: false,
-    reason: "No live deploy: PHP and MySQL do not run on Vercel.",
+    embed: true,
   },
   {
     slug: "mfh",
