@@ -50,6 +50,10 @@ clicks through it. Every cover, sheet face and page is checked at every spread:
 that it can be reached, that the item it reports is the page under the pointer,
 and that a board turns the book instead of opening a project. It exists because
 the back cover stopped responding once, for two separate reasons at once.
+
+The chrome test drives the reading light pill, the spread counter and the
+Contents mapping through fake elements, so the rules that keep them agreeing
+with the book are checked without a browser.
     npm run preview
 
 `npm run preview` serves the production bundle from the same port rule.
@@ -67,7 +71,9 @@ and the render hooks are exposed, then post captures to that loopback sink.
 | --- | --- |
 | `src/book.js` | The book itself: boards, deforming sheets, the turn state machine |
 | `src/faces.js` | What a click can land on, and what each hit means: pick set, page arithmetic, cover behaviour |
+| `src/chrome.js` | The chrome rules: light pill labels, spread counter, status line, Contents to spread |
 | `test/faces.test.mjs` | Headless click test: the real book, every spread, no browser |
+| `test/chrome.test.mjs` | Headless chrome test: the pill, the stepper and where a Contents entry lands |
 | `src/pages.js` | Cover artwork for the ten pages, the two boards, the endpapers, and the in-book card |
 | `src/main.js` | Scene, camera, room and props, lamp state, contents, pointer and keyboard input, the project overlay |
 | `src/audio.js` | Page turn sound, synthesised in the browser, no audio files |

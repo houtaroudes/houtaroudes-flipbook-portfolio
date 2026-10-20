@@ -13,6 +13,13 @@ import {
 import { Book, PAGE_W, OV } from "./book.js";
 import { loadPages, loadBoards, caseHtml, PROJECT_LIST } from "./pages.js";
 import { pickMeshes, isSheet, pageIndexOf, coverTarget } from "./faces.js";
+import {
+  spreadForPage,
+  pageAt,
+  spreadLabel as labelForSpread,
+  paintReadingLight,
+  paintStepper,
+} from "./chrome.js";
 import * as sound from "./audio.js";
 
 const canvas = document.getElementById("scene");
@@ -509,14 +516,12 @@ let lampMix = lampOn ? 1 : 0;
 // is opt-in, because a status written at load is announced before anyone did
 // anything.
 function paintLamp(announce = false) {
-  document.documentElement.classList.toggle("lamp-off", !lampOn);
-  const btn = document.getElementById("lamp-toggle");
-  if (btn) {
-    btn.setAttribute("aria-pressed", String(lampOn));
-    btn.title = lampOn ? "Reading light on. Dim the room (L)" : "Reading light off. Bring it up (L)";
-  }
-  const text = document.getElementById("lamp-toggle-text");
-  if (text) text.textContent = lampOn ? "Lamp on" : "Lamp off";
+  paintReadingLight(
+    document.documentElement,
+    document.getElementById("lamp-toggle"),
+    document.getElementById("lamp-toggle-text"),
+    lampOn,
+  );
   if (!announce) return;
   const status = document.getElementById("lamp-status");
   if (status) status.textContent = lampOn ? "Reading light on." : "Reading light dimmed.";
@@ -705,7 +710,7 @@ function pickLamp(e) {
 function resumeProject() {
   if (lastPage === null || !book) return;
   sound.unlock();
-  goToTarget(spreadForPage(lastPage));
+  goToTarget(spreadForPage(lastPage, book.NI));
   // The overlay opens once the cover has swung far enough to read as a book
   // being opened, rather than landing on a closed cover.
   setTimeout(() => openProjectIndex(lastPage), 460);
@@ -970,32 +975,15 @@ function syncHash() {
   try {
     history.replaceState(null, "", book.target ? `#${book.target}` : location.pathname + location.search);
   } catch {}
-  const total = book.N;
-  statusEl.textContent =
-    book.target === 0
-      ? "Closed"
-      : book.target >= book.NI
-        ? "Back cover"
-        : `Spread ${book.target} of ${total}: ${spreadLabel(book.target)}`;
   // The same state, visible, because on a phone the spread is small enough
-  // that the page titles alone do not tell you where in the book you are.
-  if (spreadCount) {
-    spreadCount.textContent =
-      book.target === 0 ? "Cover" : book.target >= book.NI ? "Back" : `${String(book.target).padStart(2, "0")} / ${String(book.NI - 1).padStart(2, "0")}`;
-  }
-  document.body.classList.toggle("book-open", book.target > 0 && book.target < book.NI);
-}
-
-// A page index (0..9) to the spread that shows it. Page p is the right hand
-// page of spread p/2 + 1 when p is even, and the left hand page of the spread
-// after it when p is odd.
-function spreadForPage(index) {
-  return Math.min(book.NI - 1, Math.ceil((index + 2) / 2));
+  // that the page titles alone do not tell you where in the book you are. One
+  // call paints the counter, the status line and the body class together.
+  paintStepper(spreadCount, statusEl, document.body, book.target, book.NI, spreadLabel(book.target));
 }
 
 function jumpToPage(index) {
   if (!book) return;
-  book.jump(spreadForPage(index));
+  book.jump(spreadForPage(index, book.NI));
   syncHash();
 }
 
@@ -1003,9 +991,9 @@ function jumpToPage(index) {
 // in the right pile. Target 1 opens on the front endpaper, and the last spread
 // runs out on the back endpaper.
 function spreadLabel(target) {
-  const left = pages[2 * target - 3];
-  const right = pages[2 * target - 2];
-  return `${left ? left.entry.title : "Front endpaper"} and ${right ? right.entry.title : "Back endpaper"}`;
+  const left = pages[pageAt(target, "left")];
+  const right = pages[pageAt(target, "right")];
+  return labelForSpread(left && left.entry.title, right && right.entry.title);
 }
 
 // ---------------- the in-book page ----------------
