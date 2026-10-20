@@ -199,8 +199,26 @@
       @media (max-width: 720px) {
         .reset[hidden] { display: inline-flex; }
       }
-      .sound { position: fixed; top: clamp(18px, 2.6vw, 46px); right: clamp(18px, 4.4vw, 84px); }
-      body:not(.ready) .asides, body:not(.ready) .sound { opacity: 0; pointer-events: none; }
+      /* The room controls sit together in the top corner: sound, and the
+         reading light. The light used to live only on the lamp in the scene,
+         which is a fine thing to find and a poor thing to need, so the pill
+         repeats it for anyone who would rather press a button than click
+         furniture. One state drives both. */
+      .tools {
+        position: fixed;
+        top: clamp(18px, 2.6vw, 46px);
+        right: clamp(18px, 4.4vw, 84px);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .reading { display: inline-flex; align-items: center; gap: 7px; }
+      .reading svg { flex: none; }
+      /* The rays fade when the light is down, so the pill and the room agree
+         without the label having to carry the whole change. */
+      .lamp-rays { transition: opacity 0.5s var(--ease); }
+      html.lamp-off .lamp-rays { opacity: 0.25; }
+      body:not(.ready) .asides, body:not(.ready) .tools { opacity: 0; pointer-events: none; }
 
       /* In-book page: a project site (or its card) running inside the book. */
       .site-frame {
@@ -388,7 +406,7 @@
          the wordmark and the hero keeps the floor to itself. */
       @media (max-width: 1000px) {
         .asides { bottom: auto; top: calc(clamp(18px, 2.6vw, 46px) + 56px); right: auto; left: clamp(18px, 4.4vw, 84px); gap: 8px; }
-        .sound { right: clamp(18px, 4.4vw, 84px); }
+        .tools { right: clamp(18px, 4.4vw, 84px); }
       }
       @media (max-width: 720px) {
         .hero p { max-width: 22em; }
@@ -401,6 +419,10 @@
         .reset[hidden] { display: inline-flex; visibility: hidden; pointer-events: none; }
         .site-chrome { gap: 10px; padding: 0 14px; }
         .site-note { display: none !important; }
+        /* The wordmark, the reading light and the sound pill share the top of a
+           phone only as long as the labels fit, so the light tightens up here
+           and drops its words at the very narrow end. */
+        .reading { gap: 6px; padding: 8px 12px; }
         .site-open-tab { font-size: 11px; }
         .contents {
           width: 100%;
@@ -414,6 +436,13 @@
         .contents-inner { height: 100%; padding: 22px 18px; }
         .contents-item { padding: 16px 4px; min-height: 56px; }
         .contents-kicker { display: none; }
+      }
+      /* On the narrowest phones three labels across the top is one too many.
+         The light keeps its lamp and its accessible name, which is enough for a
+         control that always sits in the same corner. */
+      @media (max-width: 340px) {
+        .reading #lamp-toggle-text { display: none; }
+        .reading { gap: 0; padding: 8px 11px; }
       }
       /* A phone on its side has almost no height: the book is the whole
          composition, so the hero steps out rather than overlapping it. */
@@ -430,7 +459,7 @@
     <canvas
       id="scene"
       tabindex="0"
-      aria-label="A 3D book on a table holding Bryan's projects. Click a page to open that project inside the book, drag a page to turn it, or use the arrow keys. Drag the table to look around the book; the view eases back to its opening angle when you stop. Pull the front cover to open the book, and click the wall lamp to switch between the reading light and a dim room; the choice is remembered."
+      aria-label="A 3D book on a table holding Bryan's projects. Click a page to open that project inside the book, drag a page to turn it, or use the arrow keys. Drag the table to look around the book; the view eases back to its opening angle when you stop. Pull the front cover to open the book, and click the lamp on the desk, or the reading light control in the corner, to switch between the reading light and a dim room; the choice is remembered."
     ></canvas>
     <div class="vignette" aria-hidden="true"></div>
     <span class="logo">Bryan Sacueza</span>
@@ -470,7 +499,24 @@
         </button>
       </div>
     </div>
-    <button type="button" class="pill sound" id="sound-toggle" aria-pressed="true">Sound on</button>
+    <div class="tools">
+      <button
+        type="button"
+        class="pill reading"
+        id="lamp-toggle"
+        aria-label="Reading light"
+        aria-pressed="true"
+        title="Reading light on. Dim the room (L)"
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path class="lamp-rays" d="M2.7 4.1 1.7 3.3M11.3 4.1l1-.8M7 2.1V1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+          <path d="M4.5 8.5h5L8.4 4.3H5.6L4.5 8.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+          <path d="M7 8.5v1.9M5.7 11.8h2.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+        </svg>
+        <span id="lamp-toggle-text">Lamp on</span>
+      </button>
+      <button type="button" class="pill sound" id="sound-toggle" aria-pressed="true">Sound on</button>
+    </div>
     <p class="sr-only" id="page-status" role="status"></p>
     <p class="sr-only" id="lamp-status" role="status"></p>
     <div class="page-hint" id="page-hint" hidden aria-hidden="true">

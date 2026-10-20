@@ -12,6 +12,7 @@ import {
 } from "./env.js";
 import { Book, PAGE_W, OV } from "./book.js";
 import { loadPages, loadBoards, caseHtml, PROJECT_LIST } from "./pages.js";
+import { pickMeshes, isSheet, pageIndexOf, coverTarget } from "./faces.js";
 import * as sound from "./audio.js";
 
 const canvas = document.getElementById("scene");
@@ -501,18 +502,39 @@ function readLamp() {
 
 let lampOn = readLamp();
 let lampMix = lampOn ? 1 : 0;
-document.documentElement.classList.toggle("lamp-off", !lampOn);
-const lampStatus = () => document.getElementById("lamp-status");
 
-function toggleLamp() {
-  lampOn = !lampOn;
+// One painter for the whole control: the class on <html>, the pill in the
+// chrome, and the line a screen reader hears. Clicking the lamp, the pill or
+// L all land here, so the room and the button cannot disagree. The spoken line
+// is opt-in, because a status written at load is announced before anyone did
+// anything.
+function paintLamp(announce = false) {
+  document.documentElement.classList.toggle("lamp-off", !lampOn);
+  const btn = document.getElementById("lamp-toggle");
+  if (btn) {
+    btn.setAttribute("aria-pressed", String(lampOn));
+    btn.title = lampOn ? "Reading light on. Dim the room (L)" : "Reading light off. Bring it up (L)";
+  }
+  const text = document.getElementById("lamp-toggle-text");
+  if (text) text.textContent = lampOn ? "Lamp on" : "Lamp off";
+  if (!announce) return;
+  const status = document.getElementById("lamp-status");
+  if (status) status.textContent = lampOn ? "Reading light on." : "Reading light dimmed.";
+}
+
+function setLamp(on) {
+  lampOn = on;
   try {
     localStorage.setItem(LAMP_KEY, lampOn ? "1" : "0");
   } catch {}
-  document.documentElement.classList.toggle("lamp-off", !lampOn);
-  const status = lampStatus();
-  if (status) status.textContent = lampOn ? "Reading light on." : "Reading light dimmed.";
+  paintLamp(true);
 }
+
+function toggleLamp() {
+  setLamp(!lampOn);
+}
+
+paintLamp();
 
 function updateRoom(t, dt) {
   pointerLight.x += (pointerLight.tx - pointerLight.x) * (1 - Math.exp(-4.5 * dt));
@@ -671,8 +693,8 @@ function pickRibbon(e) {
   return raycaster.intersectObject(ribbon.mesh, false).length > 0;
 }
 
-// The lamp hangs on the back wall, so this is only consulted when the ray has
-// already missed every page.
+// The lamp stands on the desk beside the book, so this is only consulted when
+// the ray has already missed every page.
 function pickLamp(e) {
   const rect = canvas.getBoundingClientRect();
   setNdc(e, rect);
@@ -917,32 +939,16 @@ function faceAt(e) {
   const rect = canvas.getBoundingClientRect();
   setNdc(e, rect);
   raycaster.setFromCamera(ndc, camera);
-  const meshes = [];
-  for (const it of book.items) {
-    if (it.kind === "cover") {
-      // Both boards stay pickable. An open cover lies under its pile, so the
-      // nearest hit is still the page; the case this used to break was the
-      // face-down back cover, which sits on top and could not be clicked at
-      // all once it had swung past ninety degrees.
-      meshes.push(it.board);
-    } else if (it.kind === "sheet" && (it.front.visible || it.back.visible)) {
-      meshes.push(it.front, it.back);
-    }
-  }
-  const hits = raycaster.intersectObjects(meshes, false);
+  const hits = raycaster.intersectObjects(pickMeshes(book), false);
   if (!hits.length) return null;
   const hit = hits[0];
   const k = book.faceOf(hit.object);
   return { k, side: hit.point.x >= 0 ? 1 : -1, u: hit.uv ? hit.uv.x : 0.5 };
 }
 
-// Sheet items are 1..N. NI is the target past the back board, not an item,
-// so the upper bound has to be NI - 1; using NI made the back cover look like
-// a page that could be opened, which swallowed every click on it.
-const isSheet = (k) => k > 0 && k < book.NI - 1;
-// A sheet carries two projects: the front face of sheet k is page 2k-2, the
-// back face is page 2k-1.
-const pageIndexOf = (hit) => 2 * (hit.k - 1) + (hit.side < 0 ? 1 : 0);
+// A click on a cover turns the book instead of opening a page; faces.js owns
+// that rule, along with the page arithmetic and the pick set.
+const sheetHit = (k) => isSheet(k, book.NI);
 
 function soundForMove(prev, next) {
   const d = Math.abs(next - prev);
@@ -1005,7 +1011,7 @@ function spreadLabel(target) {
 // ---------------- the in-book page ----------------
 
 function openProject(hit) {
-  return openProjectIndex(pageIndexOf(hit));
+  return openProjectIndex(pageIndexOf(hit.k, hit.side));
 }
 
 function openProjectIndex(index) {
@@ -1155,6 +1161,8 @@ function wireUi() {
 
   document.getElementById("sound-toggle").addEventListener("click", toggleSound);
   paintSound();
+  // The same light, for everyone who never thought to click the lamp.
+  document.getElementById("lamp-toggle").addEventListener("click", toggleLamp);
 
   document.getElementById("prev").addEventListener("click", () => goToTarget(book.target - 1));
   document.getElementById("next").addEventListener("click", () => goToTarget(book.target + 1));
@@ -1363,7 +1371,7 @@ function onPointerMove(e) {
   if (!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6) {
     d.moved = true;
     // Sheets turn one at a time; the front board pulls open like a cover.
-    if (!book.drag && d.hit && isSheet(d.hit.k)) {
+    if (!book.drag && d.hit && sheetHit(d.hit.k)) {
       const it = book.items[d.hit.k];
       if (it && !it.active && !it.dragging) {
         const dir = d.hit.side > 0 ? 1 : -1;
@@ -1432,15 +1440,15 @@ function endPointer(e) {
   }
   if (d.moved || !d.hit || book.busy) return;
   // A plain click: step inside the project on that page.
-  if (isSheet(d.hit.k)) {
+  if (sheetHit(d.hit.k)) {
     if (openProject(d.hit)) return;
     return;
   }
-  // Covers behave like a real book: the front board opens and closes it.
-  if (d.hit.k === 0) goToTarget(book.target === 0 ? 1 : 0);
-  // The back board is item NI - 1; NI is the target past it, which is why this
-  // comparison used to miss and the face-down cover did nothing.
-  else if (d.hit.k === book.NI - 1) goToTarget(book.target >= book.NI ? book.NI - 1 : book.NI);
+  // Covers behave like a real book: the front board opens and closes it, and
+  // the back board does the same at the end. The back board is item NI - 1,
+  // while NI is the target past it, which is the pair this used to mix up.
+  const coverTo = coverTarget(d.hit.k, book.NI, book.target);
+  if (coverTo !== null) goToTarget(coverTo);
 }
 
 // One label for both hover targets: a page names the project it opens, and
@@ -1488,7 +1496,7 @@ function hoverAt(e) {
   if (!hit && pickLamp(e)) {
     book.setHover(-1);
     canvas.style.cursor = "pointer";
-    showHint("Wall lamp", lampOn ? "Click to dim the room" : "Click to bring it up", e);
+    showHint("Desk lamp", lampOn ? "Click to dim the room" : "Click to bring it up", e);
     return;
   }
   if (!hit) {
@@ -1498,7 +1506,7 @@ function hoverAt(e) {
     return;
   }
   canvas.style.cursor = "pointer";
-  if (!isSheet(hit.k)) {
+  if (!sheetHit(hit.k)) {
     book.setHover(-1);
     // A closed book is an object you can pull open, so the cover says so.
     if (hit.k === 0 && book.items[0].p < 0.02) {
@@ -1516,7 +1524,7 @@ function hoverAt(e) {
     hideHint();
     return;
   }
-  const project = PROJECT_LIST[pageIndexOf(hit)];
+  const project = PROJECT_LIST[pageIndexOf(hit.k, hit.side)];
   if (project) showHint(project.title, project.embed ? "Open project" : "Open project page", e);
   const edge = 0.3 + 0.7 * smooth01(Math.abs(hit.u - 0.5) * 2);
   book.setHover(hit.k, edge, hit.side);

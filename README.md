@@ -40,6 +40,16 @@ no database, no environment file.
 ## Build it
 
     npm run build
+
+## Test it
+
+    npm test
+
+The pick test builds the real book in node, without a renderer, and casts
+clicks through it. Every cover, sheet face and page is checked at every spread:
+that it can be reached, that the item it reports is the page under the pointer,
+and that a board turns the book instead of opening a project. It exists because
+the back cover stopped responding once, for two separate reasons at once.
     npm run preview
 
 `npm run preview` serves the production bundle from the same port rule.
@@ -56,6 +66,8 @@ and the render hooks are exposed, then post captures to that loopback sink.
 | Path | What it is |
 | --- | --- |
 | `src/book.js` | The book itself: boards, deforming sheets, the turn state machine |
+| `src/faces.js` | What a click can land on, and what each hit means: pick set, page arithmetic, cover behaviour |
+| `test/faces.test.mjs` | Headless click test: the real book, every spread, no browser |
 | `src/pages.js` | Cover artwork for the ten pages, the two boards, the endpapers, and the in-book card |
 | `src/main.js` | Scene, camera, room and props, lamp state, contents, pointer and keyboard input, the project overlay |
 | `src/audio.js` | Page turn sound, synthesised in the browser, no audio files |
@@ -75,6 +87,10 @@ no taller than the screen is wide. One finger swipes the table to turn a page,
 two fingers move the camera, and Contents is the readable way in. Landscape uses
 the same framing as the desktop and drops the hero so the book can fill the
 height.
+
+The reading light has two controls and one state: the lamp on the desk, and a
+pill beside the sound button. Both store the same preference, so the room, the
+chrome and the button stay together whichever one is used.
 
 Append `?capture=1` to keep the drawing buffer readable and expose the render
 hooks used by a screenshot pass.
