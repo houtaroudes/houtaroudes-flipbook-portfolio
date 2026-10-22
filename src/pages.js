@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
 // Covers for the real highlight projects from the v2 portfolio
-// (houtaroudes-portfolio-v2), in that list's exact order. Everything is drawn
+// (houtaroudes-portfolio), in that list's exact order. Everything is drawn
 // on a canvas right here: no screenshots, no copied assets.
 //
 // Each entry also carries what the book needs to open the project inside the
