@@ -126,6 +126,19 @@ const PROJECTS = [
     reason: "Concept build, not deployed.",
   },
   {
+    slug: "trey-kicks",
+    title: "Trey KICKs",
+    kicker: "Full stack build",
+    blurb: "A graded sneakers and apparel e-commerce store: pre-order catalog, cart, checkout, receipts and a status page.",
+    tags: ["PHP", "MySQL", "React", "Three.js"],
+    hue: 14,
+    dark: true,
+    url: null,
+    repo: "https://github.com/houtaroudes/trey-kicks",
+    embed: false,
+    reason: "No live deploy: local PHP 8 and MySQL build for now.",
+  },
+  {
     slug: "repos",
     title: "Everything Else",
     kicker: "All repositories",
@@ -380,7 +393,7 @@ function boardFront() {
 
   g.fillStyle = "#f0e9dc";
   g.font = "600 104px 'Inter Tight', sans-serif";
-  g.fillText("Ten builds", 74, 300);
+  g.fillText("Eleven builds", 74, 300);
 
   g.fillStyle = "rgba(226,214,190,0.62)";
   g.font = "400 30px 'Inter Tight', sans-serif";
@@ -489,7 +502,7 @@ function endpaperFront() {
 
   g.fillStyle = "rgba(46,38,30,0.45)";
   g.font = "400 22px 'Inter Tight', sans-serif";
-  g.fillText("Ten projects, in the order they were built.", 76, H - 78);
+  g.fillText("Eleven projects, in the order they were built.", 76, H - 78);
 
   cloth(g, W, H, false);
   return c;
