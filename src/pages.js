@@ -134,7 +134,9 @@ const PROJECTS = [
     hue: 14,
     dark: true,
     url: null,
-    repo: "https://github.com/houtaroudes/trey-kicks",
+    // The repo has no GitHub remote yet, so there is no source link to offer
+    // until it is published. The card renders from the fields above.
+    repo: null,
     embed: false,
     reason: "No live deploy: local PHP 8 and MySQL build for now.",
   },
